@@ -30,17 +30,17 @@ class RAFTGMA(nn.Module):
 
         self.hidden_dim = hdim = 128
         self.context_dim = cdim = 128
-        args.corr_levels = 4
-        args.corr_radius = 4
+        self.args['corr_levels'] = 4
+        self.args['corr_radius'] = 4
 
         if 'dropout' not in self.args:
-            self.args.dropout = 0
+            self.args['dropout'] = 0
 
         # feature network, context network, and update block
-        self.fnet = BasicEncoder(output_dim=256, norm_fn='instance', dropout=args.dropout)
-        self.cnet = BasicEncoder(output_dim=hdim + cdim, norm_fn='batch', dropout=args.dropout)
+        self.fnet = BasicEncoder(output_dim=256, norm_fn='instance', dropout=self.args['dropout'])
+        self.cnet = BasicEncoder(output_dim=hdim + cdim, norm_fn='batch', dropout=self.args['dropout'])
         self.update_block = GMAUpdateBlock(self.args, hidden_dim=hdim)
-        self.att = Attention(args=self.args, dim=cdim, heads=self.args.num_heads, max_pos_size=160, dim_head=cdim)
+        self.att = Attention(args=self.args, dim=cdim, heads=self.args['num_heads'], max_pos_size=160, dim_head=cdim)
 
     def freeze_bn(self):
         for m in self.modules():
@@ -82,15 +82,15 @@ class RAFTGMA(nn.Module):
         cdim = self.context_dim
 
         # run the feature network
-        with autocast(enabled=self.args.mixed_precision):
+        with autocast(enabled=self.args['mixed_precision']):
             fmap1, fmap2 = self.fnet([image1, image2])
 
         fmap1 = fmap1.float()
         fmap2 = fmap2.float()
-        corr_fn = CorrBlock(fmap1, fmap2, radius=self.args.corr_radius)
+        corr_fn = CorrBlock(fmap1, fmap2, radius=self.args['corr_radius'])
 
         # run the context network
-        with autocast(enabled=self.args.mixed_precision):
+        with autocast(enabled=self.args['mixed_precision']):
             cnet = self.cnet(image1)
             net, inp = torch.split(cnet, [hdim, cdim], dim=1)
             net = torch.tanh(net)
@@ -109,7 +109,7 @@ class RAFTGMA(nn.Module):
             corr = corr_fn(coords1)  # index correlation volume
 
             flow = coords1 - coords0
-            with autocast(enabled=self.args.mixed_precision):
+            with autocast(enabled=self.args['mixed_precision']):
                 net, up_mask, delta_flow = self.update_block(net, inp, corr, flow, attention)
 
             # F(t+1) = F(t) + \Delta(t)

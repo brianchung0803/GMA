@@ -66,7 +66,8 @@ class SepConvGRU(nn.Module):
 class BasicMotionEncoder(nn.Module):
     def __init__(self, args):
         super(BasicMotionEncoder, self).__init__()
-        cor_planes = args.corr_levels * (2*args.corr_radius + 1)**2
+        # cor_planes = args['corr_levels'] * (2*args['corr_radius'] + 1)**2
+        cor_planes = 4 * (2*4 + 1)**2
         self.convc1 = nn.Conv2d(cor_planes, 256, 1, padding=0)
         self.convc2 = nn.Conv2d(256, 192, 3, padding=1)
         self.convf1 = nn.Conv2d(2, 128, 7, padding=3)
@@ -122,7 +123,7 @@ class GMAUpdateBlock(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(256, 64*9, 1, padding=0))
 
-        self.aggregator = Aggregate(args=self.args, dim=128, dim_head=128, heads=self.args.num_heads)
+        self.aggregator = Aggregate(args=self.args, dim=128, dim_head=128, heads=self.args['num_heads'])
 
     def forward(self, net, inp, corr, flow, attention):
         motion_features = self.encoder(flow, corr)
